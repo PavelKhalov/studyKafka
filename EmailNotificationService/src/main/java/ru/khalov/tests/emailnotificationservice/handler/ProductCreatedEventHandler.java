@@ -1,55 +1,84 @@
 package ru.khalov.tests.emailnotificationservice.handler;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.kafka.annotation.KafkaHandler;
 import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.kafka.support.KafkaHeaders;
+import org.springframework.messaging.handler.annotation.Header;
+import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
 import ru.khalov.tests.core.CreateProductEvent;
 import ru.khalov.tests.emailnotificationservice.exceptoion.NonRetryableException;
 import ru.khalov.tests.emailnotificationservice.exceptoion.RetryableException;
+import ru.khalov.tests.emailnotificationservice.persistence.entity.ProcessedEventEntity;
+import ru.khalov.tests.emailnotificationservice.persistence.repsitory.ProductRepository;
 
 
+@Transactional(readOnly = true)
 @Slf4j
 @Component
 @KafkaListener (topics = "productTopic", containerFactory = "containerFactory")
 public class ProductCreatedEventHandler {
 
-    private RestTemplate restTemplate;
+    private final ProductRepository productRepository;
+    private final RestTemplate restTemplate;
 
-    public ProductCreatedEventHandler (RestTemplate restTemplate){
+    public ProductCreatedEventHandler (RestTemplate restTemplate, ProductRepository productRepository){
         this.restTemplate = restTemplate;
+        this.productRepository = productRepository;
     }
 
+    //@Payload - тело запроса
+    @Transactional //по дефолту readOnly - false
     @KafkaHandler
-    public void handle(CreateProductEvent createEvent) {
+    public void handle(@Payload CreateProductEvent createEvent,
+                       @Header ("msgID") String msgId,
+                       //стандартный хэдер который есть в константах
+                       @Header (KafkaHeaders.RECEIVED_KEY) String msgKey) {
 
-//        log.info("Receive event: {}", createEvent.getTitle());
-//        log.info("Price: {}", createEvent.getPrice());
 
-        String url = "http://localhost:8090/response/200";
-        try {
-            ResponseEntity<String> response =  restTemplate.exchange(url, HttpMethod.GET, null, String.class);
-            if (response.getStatusCode().value() == HttpStatus.OK.value()){
-                log.info("Receive event: {}", createEvent.getTitle());
-                log.info("Price: {}", createEvent.getPrice());
-                log.info("response body: {}", response.getBody());
-            }
-        } catch (ResourceAccessException e){
-            log.error(e.getMessage());
-            throw new RetryableException("tyr retry");
-        } catch (HttpServerErrorException e){
-            log.error(e.getMessage());
-            throw new NonRetryableException("don't try retry");
-        } catch (Exception e){
-            log.error(e.getMessage());
-            throw new NonRetryableException("don't try retry");
+        var entity = productRepository.findByMessageId(msgId);
+
+        if(entity != null) {
+            log.info("Такая сущность уже есть в бд");
+            return;
         }
+
+//        try {
+//            String url = "http://localhost:8090/response/200";
+//            ResponseEntity<String> response =  restTemplate.exchange(url, HttpMethod.GET, null, String.class);
+//            if (response.getStatusCode().value() == HttpStatus.OK.value()){
+//                log.info("Receive event: {}", createEvent.getTitle());
+//                log.info("Price: {}", createEvent.getPrice());
+//                log.info("response body: {}", response.getBody());
+//            }
+//        } catch (ResourceAccessException e){
+//            log.error(e.getMessage());
+//            throw new RetryableException("tyr retry");
+//        } catch (HttpServerErrorException e){
+//            log.error(e.getMessage());
+//            throw new NonRetryableException("don't try retry");
+//        } catch (Exception e){
+//            log.error(e.getMessage());
+//            throw new NonRetryableException("don't try retry");
+//        }
+
+        try{
+            productRepository.save(new ProcessedEventEntity(msgId, createEvent.getId()));
+            log.info("entity saved into database");
+        }catch (DataIntegrityViolationException e){
+            log.error(e.getMessage());
+            throw new NonRetryableException(e);
+        }
+
     }
 
 
