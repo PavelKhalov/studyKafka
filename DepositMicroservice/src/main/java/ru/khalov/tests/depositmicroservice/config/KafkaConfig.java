@@ -31,6 +31,7 @@ public class KafkaConfig {
         config.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, ErrorHandlingDeserializer.class);
         config.put(ErrorHandlingDeserializer.VALUE_DESERIALIZER_CLASS, JacksonJsonDeserializer.class);
         config.put(JacksonJsonDeserializer.TRUSTED_PACKAGES, "*");
+        config.put(ConsumerConfig.ISOLATION_LEVEL_CONFIG, "READ_COMMITTED".toLowerCase());
 
         return new DefaultKafkaConsumerFactory<>(config);
     }
@@ -43,7 +44,7 @@ public class KafkaConfig {
         ConcurrentKafkaListenerContainerFactory containerFactory = new ConcurrentKafkaListenerContainerFactory<>();
         containerFactory.setConsumerFactory(consumerFactory);
 
-        DefaultErrorHandler err = new DefaultErrorHandler( new DeadLetterPublishingRecoverer(kafkaTemplate), new FixedBackOff(300));
+        DefaultErrorHandler err = new DefaultErrorHandler( new DeadLetterPublishingRecoverer(kafkaTemplate), new FixedBackOff(500, 3));
         err.addNotRetryableExceptions(NonRetryableError.class);
         err.addRetryableExceptions(RetryableError.class);
 

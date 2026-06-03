@@ -16,6 +16,8 @@ import ru.khalov.tests.core.WithdrawRequestEvent;
 import ru.khalov.tests.transfermicroservice.error.TransferServiceException;
 import ru.khalov.tests.transfermicroservice.model.TransferRestModel;
 
+import java.rmi.ConnectException;
+
 @Slf4j
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -27,7 +29,13 @@ public class TransactionService {
     private final Environment environment;
 
 
-    @Transactional
+    //// Включатся транзакции специально для кафки, а не постгреса
+    @Transactional(
+            value = "transactionManager",
+            //rollbackFor = Throwable.class  /* ролбэк пойдёт по всем исключениям */,
+            rollbackFor = {TransferServiceException.class, ConnectException.class}, /* Так ролбэк только по выбранным классам*/
+            noRollbackFor = {NullPointerException.class} //не делает ролбэк
+    )
     public boolean transfer(TransferRestModel transferRestModel) {
         WithdrawRequestEvent withdraw = new WithdrawRequestEvent(
                 transferRestModel.getSenderId(),
