@@ -65,7 +65,7 @@ public class KafkaConfig {
     }
 
     @Bean
-    public KafkaTransactionManager<String, Object> transactionManager (ProducerFactory<String, Object> producerFactory){
+    public KafkaTransactionManager<String, Object> kafkaTransactionManager (ProducerFactory<String, Object> producerFactory){
         return  new KafkaTransactionManager<>(producerFactory);
     }
 }

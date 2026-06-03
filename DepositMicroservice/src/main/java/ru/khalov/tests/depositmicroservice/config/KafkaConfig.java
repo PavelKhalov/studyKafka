@@ -32,6 +32,7 @@ public class KafkaConfig {
         config.put(ErrorHandlingDeserializer.VALUE_DESERIALIZER_CLASS, JacksonJsonDeserializer.class);
         config.put(JacksonJsonDeserializer.TRUSTED_PACKAGES, "*");
         config.put(ConsumerConfig.ISOLATION_LEVEL_CONFIG, "READ_COMMITTED".toLowerCase());
+        config.put(ConsumerConfig.GROUP_ID_CONFIG, "deposit-group");
 
         return new DefaultKafkaConsumerFactory<>(config);
     }
@@ -47,6 +48,8 @@ public class KafkaConfig {
         DefaultErrorHandler err = new DefaultErrorHandler( new DeadLetterPublishingRecoverer(kafkaTemplate), new FixedBackOff(500, 3));
         err.addNotRetryableExceptions(NonRetryableError.class);
         err.addRetryableExceptions(RetryableError.class);
+
+        containerFactory.setCommonErrorHandler(err);
 
         return containerFactory;
     }

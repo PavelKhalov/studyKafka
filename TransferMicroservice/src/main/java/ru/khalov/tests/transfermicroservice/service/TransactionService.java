@@ -31,7 +31,7 @@ public class TransactionService {
 
     //// Включатся транзакции специально для кафки, а не постгреса
     @Transactional(
-            value = "transactionManager",
+            value = "kafkaTransactionManager",
             //rollbackFor = Throwable.class  /* ролбэк пойдёт по всем исключениям */,
             rollbackFor = {TransferServiceException.class, ConnectException.class}, /* Так ролбэк только по выбранным классам*/
             noRollbackFor = {NullPointerException.class} //не делает ролбэк

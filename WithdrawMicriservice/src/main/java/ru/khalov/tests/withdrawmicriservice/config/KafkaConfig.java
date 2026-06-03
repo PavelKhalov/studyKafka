@@ -36,6 +36,7 @@ public class KafkaConfig {
         config.put(ErrorHandlingDeserializer.VALUE_DESERIALIZER_CLASS, env.getProperty("spring.kafka.consumer.value-deserializer"));
         config.put(JacksonJsonDeserializer.TRUSTED_PACKAGES, env.getProperty("spring.kafka.consumer.properties.spring.json.trusted.packages"));
         config.put(ConsumerConfig.ISOLATION_LEVEL_CONFIG, env.getProperty("spring.kafka.consumer.isolation-level", "READ_COMMITTED").toLowerCase());
+        config.put(ConsumerConfig.GROUP_ID_CONFIG, env.getProperty("spring.kafka.consumer.group-id"));
 
         return new DefaultKafkaConsumerFactory<>(config);
     }
@@ -51,6 +52,8 @@ public class KafkaConfig {
         DefaultErrorHandler err = new DefaultErrorHandler( new DeadLetterPublishingRecoverer(kafkaTemplate), new FixedBackOff(300));
         err.addNotRetryableExceptions(NonRetryableError.class);
         err.addRetryableExceptions(RetryableError.class);
+
+        containerFactory.setCommonErrorHandler(err);
 
         return containerFactory;
     }
