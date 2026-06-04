@@ -10,7 +10,7 @@
         <module name="core" />
         <module name="mockServise" />
       </profile>
-      <profile name="Annotation profile for DepositMicroservice" enabled="true">
+      <profile name="Annotation profile for WithdrawMicriservice" enabled="true">
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />

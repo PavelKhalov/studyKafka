@@ -2,6 +2,7 @@ package ru.khalov.tests.transfermicroservice.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.BeanUtils;
 import org.springframework.core.env.Environment;
 import org.springframework.data.web.ReactiveOffsetScrollPositionHandlerMethodArgumentResolver;
 import org.springframework.http.HttpMethod;
@@ -15,8 +16,11 @@ import ru.khalov.tests.core.DepositRequestEvent;
 import ru.khalov.tests.core.WithdrawRequestEvent;
 import ru.khalov.tests.transfermicroservice.error.TransferServiceException;
 import ru.khalov.tests.transfermicroservice.model.TransferRestModel;
+import ru.khalov.tests.transfermicroservice.persistence.TransferEntity;
+import ru.khalov.tests.transfermicroservice.persistence.TransferRepository;
 
 import java.rmi.ConnectException;
+import java.util.UUID;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -27,12 +31,12 @@ public class TransactionService {
     private final KafkaTemplate<String, Object> kafkaTemplate;
     private final RestTemplate restTemplate;
     private final Environment environment;
-
+    private final TransferRepository transferRepository;
 
     //// Включатся транзакции специально для кафки, а не постгреса
     @Transactional(
-            value = "kafkaTransactionManager",
-            //rollbackFor = Throwable.class  /* ролбэк пойдёт по всем исключениям */,
+            value = "transactionManager",
+            //rollbackFor = Throwable.class /* ролбэк пойдёт по всем исключениям */,
             rollbackFor = {TransferServiceException.class, ConnectException.class}, /* Так ролбэк только по выбранным классам*/
             noRollbackFor = {NullPointerException.class} //не делает ролбэк
     )
@@ -50,6 +54,14 @@ public class TransactionService {
         );
 
         try{
+            TransferEntity transferEntity = new TransferEntity();
+            //BeanUtils.copyProperties(transferRestModel, transferEntity);
+            transferEntity.setSenderId(transferRestModel.getSenderId());
+            transferEntity.setRecipientId(transferRestModel.getRecipientId());
+            transferEntity.setAmount(transferRestModel.getAmount());
+            transferEntity.setTransferId(UUID.randomUUID().toString());
+            transferRepository.save(transferEntity);
+
             kafkaTemplate.send(environment.getProperty("withdraw-topic", "withdraw-topic"), withdraw);
             log.info("Send event to withdraw topic");
 

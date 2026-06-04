@@ -1,5 +1,6 @@
 package ru.khalov.tests.transfermicroservice.config;
 
+import jakarta.persistence.EntityManagerFactory;
 import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.hibernate.engine.transaction.jta.platform.internal.JBossAppServerJtaPlatform;
@@ -12,6 +13,7 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.core.ProducerFactory;
 import org.springframework.kafka.support.serializer.ErrorHandlingDeserializer;
 import org.springframework.kafka.transaction.KafkaTransactionManager;
+import org.springframework.orm.jpa.JpaTransactionManager;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -67,5 +69,10 @@ public class KafkaConfig {
     @Bean
     public KafkaTransactionManager<String, Object> kafkaTransactionManager (ProducerFactory<String, Object> producerFactory){
         return  new KafkaTransactionManager<>(producerFactory);
+    }
+
+    @Bean(name = "transactionManager")
+    public JpaTransactionManager jpaTransactionManager(EntityManagerFactory entityManagerFactory){
+        return new JpaTransactionManager(entityManagerFactory);
     }
 }
